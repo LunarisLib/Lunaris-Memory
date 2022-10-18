@@ -8,7 +8,9 @@ namespace Lunaris {
 		if (m_data) {
 			std::lock_guard<std::mutex> l(m_data->m_safe);
 
-			if (m_data->shareable) delete m_data->shareable;
+			if (m_data->shareable) {
+				m_data->destr(m_data->shareable);
+			}
 
 			m_data->shareable = ptr;
 			ptr = nullptr;
@@ -78,7 +80,9 @@ namespace Lunaris {
 
 		std::unique_lock<std::mutex> l(m_data->m_safe);
 		if (--m_data->count == 0) {
-			if (m_data->shareable) delete m_data->shareable;
+			if (m_data->shareable) {
+				m_data->destr(m_data->shareable);
+			}
 			m_data->shareable = nullptr;
 			l.unlock();
 			delete m_data;
@@ -88,21 +92,27 @@ namespace Lunaris {
 	}
 
 	template<typename T>
-	inline Memory<T>::Memory(const T& oth)
+	inline Memory<T>::Memory(const T& oth, std::function<void(T*)> destr)
 	{
 		__make_valid(oth);
+		if (!destr) throw - 3; // you can set an "empty-like" one, but if it's empty, consider this a bug
+		m_data->destr = destr;
 	}
 
 	template<typename T>
-	inline Memory<T>::Memory(T&& oth)
+	inline Memory<T>::Memory(T&& oth, std::function<void(T*)> destr)
 	{
 		__make_valid((T&&)(oth));
+		if (!destr) throw - 3; // you can set an "empty-like" one, but if it's empty, consider this a bug
+		m_data->destr = destr;
 	}
 
 	template<typename T>
-	inline Memory<T>::Memory(T*&& oth)
+	inline Memory<T>::Memory(T*&& oth, std::function<void(T*)> destr)
 	{
 		__make_valid((T*&&)oth);
+		if (!destr) throw - 3; // you can set an "empty-like" one, but if it's empty, consider this a bug
+		m_data->destr = destr;
 	}
 
 	template<typename T>
@@ -218,6 +228,15 @@ namespace Lunaris {
 	inline size_t Memory<T>::use_count() const
 	{
 		return m_data ? m_data->count : 0;
+	}
+
+	template<typename T>
+	void Memory<T>::set_destructor(std::function<void(T*)> destr)
+	{
+		if (!m_data) return;
+		if (!destr) throw -3; // you can set an "empty-like" one, but if it's empty, consider this a bug
+		std::lock_guard<std::mutex> l(m_data->m_safe);
+		m_data->destr = destr;
 	}
 
 	template<typename T>
