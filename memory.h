@@ -52,6 +52,9 @@ namespace Lunaris {
 
 		T* release(); // take it from all, but keep all referenced to the same thing (wow)
 		void reset(); // ref-
+
+		bool has_value() const;
+		operator bool() const;
 	};
 }
 

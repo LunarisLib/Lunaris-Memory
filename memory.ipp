@@ -1,3 +1,4 @@
+#include "memory.h"
 #pragma once
 
 namespace Lunaris {
@@ -253,5 +254,17 @@ namespace Lunaris {
 	inline void Memory<T>::reset()
 	{
 		__unref_auto();
+	}
+
+	template<typename T>
+	inline bool Memory<T>::has_value() const
+	{
+		return m_data && m_data->shareable;
+	}
+
+	template<typename T>
+	inline Memory<T>::operator bool() const
+	{
+		return m_data && m_data->shareable;
 	}
 }
