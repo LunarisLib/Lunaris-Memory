@@ -3,16 +3,20 @@
 #include <mutex>
 #include <functional>
 
+#include <Lunaris/Memory/exception.h>
+
 namespace Lunaris {
+namespace Memory {
+
 	template<typename T>
-	const std::function<void(T*)> default_destructor = [](T* t) {delete t; };
+	constexpr auto default_destructor = [](T* t) { delete t; };
 
 	template<typename T>
 	class Memory {
 		struct block_data {
 			T* shareable = nullptr;
 			size_t count = 1;
-			std::function<void(T*)> destr = default_destructor<T>;
+			std::function<void(T*)> destr{};
 			mutable std::mutex m_safe;
 		};
 		block_data* m_data = nullptr;
@@ -25,9 +29,9 @@ namespace Lunaris {
 		void __unref_auto();
 	public:
 		Memory() = default;
-		Memory(const T&, std::function<void(T*)> = default_destructor<T>);		// copy
-		Memory(T&&, std::function<void(T*)> = default_destructor<T>);			// move
-		Memory(T*&&, std::function<void(T*)> = default_destructor<T>);			// absorb
+		Memory(const T&, std::function<void(T*)> = default_destructor<T>); // copy
+		Memory(T&&, 	 std::function<void(T*)> = default_destructor<T>); // move
+		Memory(T*&&, 	 std::function<void(T*)> = default_destructor<T>); // absorb
 		Memory(Memory&&);		// move
 		Memory(const Memory&);	// ref+
 		~Memory();				// ref-
@@ -50,12 +54,14 @@ namespace Lunaris {
 		size_t use_count() const;
 		void set_destructor(std::function<void(T*)> = default_destructor<T>);
 
-		T* release(); // take it from all, but keep all referenced to the same thing (wow)
+		T* release(T*&& new_ref = nullptr); // take it from all, but keep all referenced to the same thing (wow)
 		void reset(); // ref-
 
 		bool has_value() const;
 		operator bool() const;
 	};
-}
+    
+} // namespace Memory
+} // namespace Lunaris
 
-#include "memory.ipp"
+#include <Lunaris/Memory/impl/memory.ipp>
